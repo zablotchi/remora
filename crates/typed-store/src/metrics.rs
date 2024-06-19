@@ -912,6 +912,6 @@ impl DBMetrics {
     }
     pub fn get() -> &'static Arc<DBMetrics> {
         ONCE.get()
-            .unwrap_or_else(|| DBMetrics::init(prometheus::default_registry()))
+            .unwrap_or_else(|| DBMetrics::init(&prometheus::Registry::new()))
     }
 }

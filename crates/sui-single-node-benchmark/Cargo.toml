@@ -17,6 +17,7 @@ sui-test-transaction-builder.workspace = true
 sui-transaction-checks.workspace = true
 sui-types = { workspace = true, features = ["test-utils"] }
 sui-storage.workspace = true
+fastcrypto = { workspace = true, features = ["copy_key"] }
 
 rand.workspace = true
 async-trait.workspace = true

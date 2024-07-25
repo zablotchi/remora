@@ -1,30 +1,35 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::command::Component;
-use crate::mock_account::{batch_create_account_and_gas, Account};
-use crate::mock_storage::InMemoryObjectStore;
-use crate::single_node::SingleValidator;
-use crate::tx_generator::SharedObjectCreateTxGenerator;
-use crate::tx_generator::{RootObjectCreateTxGenerator, TxGenerator};
-use crate::workload::Workload;
-use futures::stream::FuturesUnordered;
-use futures::StreamExt;
-use std::collections::{BTreeMap, HashMap};
-use std::ops::Deref;
-use std::sync::Arc;
+use std::{
+    collections::{BTreeMap, HashMap},
+    ops::Deref,
+    sync::Arc,
+};
+
+use futures::{stream::FuturesUnordered, StreamExt};
 use sui_config::node::RunWithRange;
 use sui_test_transaction_builder::PublishData;
-use sui_types::base_types::{ObjectID, ObjectRef, SequenceNumber, SuiAddress};
-use sui_types::effects::{TransactionEffects, TransactionEffectsAPI};
-use sui_types::messages_grpc::HandleTransactionResponse;
-use sui_types::mock_checkpoint_builder::ValidatorKeypairProvider;
-use sui_types::transaction::{
-    CertifiedTransaction, SignedTransaction, Transaction, VerifiedTransaction,
+use sui_types::{
+    base_types::{ObjectID, ObjectRef, SequenceNumber, SuiAddress},
+    effects::{TransactionEffects, TransactionEffectsAPI},
+    messages_grpc::HandleTransactionResponse,
+    mock_checkpoint_builder::ValidatorKeypairProvider,
+    transaction::{CertifiedTransaction, SignedTransaction, Transaction, VerifiedTransaction},
 };
-use tracing::info;
 use tokio::sync::mpsc::Sender;
+use tracing::info;
 
+use crate::{
+    command::Component,
+    mock_account::{batch_create_account_and_gas, Account},
+    mock_storage::InMemoryObjectStore,
+    single_node::SingleValidator,
+    tx_generator::{RootObjectCreateTxGenerator, SharedObjectCreateTxGenerator, TxGenerator},
+    workload::Workload,
+};
+
+#[derive(Clone)]
 pub struct BenchmarkContext {
     validator: SingleValidator,
     user_accounts: BTreeMap<SuiAddress, Account>,

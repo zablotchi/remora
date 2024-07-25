@@ -1,24 +1,34 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::{Arc, RwLock},
+};
+
 use move_binary_format::CompiledModule;
 use move_bytecode_utils::module_cache::GetModule;
 use move_core_types::language_storage::ModuleId;
 use once_cell::unsync::OnceCell;
 use prometheus::core::{Atomic, AtomicU64};
-use sui_types::effects::{TransactionEffects, TransactionEffectsAPI};
-use std::collections::{HashMap, BTreeMap};
-use std::sync::{Arc, RwLock};
 use sui_storage::package_object_cache::PackageObjectCache;
-use sui_types::base_types::{EpochId, ObjectID, ObjectRef, SequenceNumber, VersionNumber};
-use sui_types::error::{SuiError, SuiResult};
-use sui_types::inner_temporary_store::InnerTemporaryStore;
-use sui_types::object::{Object, Owner};
-use sui_types::storage::{
-    get_module_by_id, BackingPackageStore, ChildObjectResolver, GetSharedLocks, ObjectStore,
-    PackageObject, ParentSync,
+use sui_types::{
+    base_types::{EpochId, ObjectID, ObjectRef, SequenceNumber, VersionNumber},
+    effects::{TransactionEffects, TransactionEffectsAPI},
+    error::{SuiError, SuiResult},
+    inner_temporary_store::InnerTemporaryStore,
+    object::{Object, Owner},
+    storage::{
+        get_module_by_id,
+        BackingPackageStore,
+        ChildObjectResolver,
+        GetSharedLocks,
+        ObjectStore,
+        PackageObject,
+        ParentSync,
+    },
+    transaction::{InputObjectKind, InputObjects, ObjectReadResult, TransactionKey},
 };
-use sui_types::transaction::{InputObjectKind, InputObjects, ObjectReadResult, TransactionKey};
 
 #[derive(Clone)]
 pub struct InMemoryObjectStore {
@@ -95,7 +105,11 @@ impl InMemoryObjectStore {
 
     // FIXME: is there a way to retrieve written Object type from tx_effect?
     // could't find for now
-    pub fn commit_effects(&self, tx_effect: TransactionEffects, written: BTreeMap<ObjectID, Object>) {
+    pub fn commit_effects(
+        &self,
+        tx_effect: TransactionEffects,
+        written: BTreeMap<ObjectID, Object>,
+    ) {
         let mut objects = self.objects.write().unwrap();
         for (object_id, _, _) in tx_effect.deleted() {
             objects.remove(&object_id);

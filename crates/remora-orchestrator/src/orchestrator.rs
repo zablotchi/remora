@@ -606,6 +606,8 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
                 return Ok(());
             }
 
+            return Ok(());
+
             // Deploy the load generators.
             self.run_clients(&parameters).await?;
 

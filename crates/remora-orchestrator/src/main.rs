@@ -45,7 +45,7 @@ pub struct Opts {
     #[clap(
         long,
         value_name = "FILE",
-        default_value = "crates/orchestrator/assets/settings.yml",
+        default_value = "crates/remora-orchestrator/assets/settings.yml",
         global = true
     )]
     settings_path: String,
@@ -151,7 +151,7 @@ async fn main() -> eyre::Result<()> {
 }
 
 async fn run<C: ServerProviderClient>(
-    settings: Settings,
+    mut settings: Settings,
     client: C,
     opts: Opts,
 ) -> eyre::Result<()> {
@@ -190,7 +190,7 @@ async fn run<C: ServerProviderClient>(
         // Run benchmarks.
         Operation::Benchmark {
             committee,
-            loads,
+            mut loads,
             skip_testbed_update,
             skip_testbed_configuration,
         } => {
@@ -221,6 +221,12 @@ async fn run<C: ServerProviderClient>(
                 }
                 None => ClientParameters::default(),
             };
+
+            // NOTE: hack - the duration & load is set by the client parameters to ensure
+            // there are enough genesis objects.
+            // TODO: Remove it from orchestrator parameters.
+            settings.benchmark_duration = client_parameters.duration;
+            loads = vec![client_parameters.load as usize];
 
             let set_of_benchmark_parameters = BenchmarkParameters::new_from_loads(
                 settings.clone(),

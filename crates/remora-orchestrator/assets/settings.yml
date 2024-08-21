@@ -1,5 +1,5 @@
 ---
-testbed_id: "${USER}-mysticeti"
+testbed_id: "${USER}-remora"
 cloud_provider: aws
 token_file: "/Users/${USER}/.aws/credentials"
 ssh_private_key_file: "/Users/${USER}/.ssh/aws"
@@ -7,8 +7,7 @@ regions:
   - us-east-1
 specs: m5d.8xlarge
 repository:
-  url: https://github.com/asonnino/mysticeti.git
-  commit: main
-node_parameters_path: "crates/orchestrator/assets/node-parameters.yml"
-client_parameters_path: "crates/orchestrator/assets/client-parameters.yml"
-benchmark_duration: 500
+  url: https://github.com/scofield-mysten/sui
+  commit: remora
+node_parameters_path: "crates/remora-orchestrator/assets/node-parameters.yml"
+client_parameters_path: "crates/remora-orchestrator/assets/client-parameters.yml"

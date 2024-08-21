@@ -1,3 +1,1 @@
-leader_timeout:
-  secs: 1
-  nanos: 0
+collocated_pre_executors: !CollocatedPreExecutor { primary: 0, proxy: 1 }

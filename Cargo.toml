@@ -81,6 +81,7 @@ members = [
   "crates/mysten-util-mem-derive",
   "crates/prometheus-closure-metric",
   "crates/remora",
+  "crates/remora-orchestrator",
   "crates/shared-crypto",
   "crates/simulacrum",
   "crates/sui",
@@ -571,7 +572,9 @@ move-analyzer = { path = "external-crates/move/crates/move-analyzer" }
 fastcrypto = { git = "https://github.com/MystenLabs/fastcrypto", rev = "c101a5176799db3eb9c801b844e7add92153d291" }
 fastcrypto-tbls = { git = "https://github.com/MystenLabs/fastcrypto", rev = "c101a5176799db3eb9c801b844e7add92153d291" }
 fastcrypto-zkp = { git = "https://github.com/MystenLabs/fastcrypto", rev = "c101a5176799db3eb9c801b844e7add92153d291", package = "fastcrypto-zkp" }
-fastcrypto-vdf = { git = "https://github.com/MystenLabs/fastcrypto", rev = "c101a5176799db3eb9c801b844e7add92153d291", features = ["experimental"] }
+fastcrypto-vdf = { git = "https://github.com/MystenLabs/fastcrypto", rev = "c101a5176799db3eb9c801b844e7add92153d291", features = [
+  "experimental",
+] }
 
 # anemo dependencies
 anemo = { git = "https://github.com/mystenlabs/anemo.git", rev = "26d415eb9aa6a2417be3c03c57d6e93c30bd1ad7" }

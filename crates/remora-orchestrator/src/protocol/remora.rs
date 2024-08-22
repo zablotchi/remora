@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
 };
 
-use remora::config::{BenchmarkConfig, ValidatorConfig};
+use remora::config::{ValidatorConfig, ValidatorParameters};
 use serde::{Deserialize, Serialize};
 
 use super::{ProtocolCommands, ProtocolMetrics, ProtocolParameters, BINARY_PATH};
@@ -16,10 +16,10 @@ use crate::{benchmark::BenchmarkParameters, client::Instance, settings::Settings
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(transparent)]
-pub struct RemoraNodeParameters(ValidatorConfig);
+pub struct RemoraNodeParameters(ValidatorParameters);
 
 impl Deref for RemoraNodeParameters {
-    type Target = ValidatorConfig;
+    type Target = ValidatorParameters;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -50,10 +50,10 @@ impl ProtocolParameters for RemoraNodeParameters {}
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(transparent)]
-pub struct RemoraClientParameters(BenchmarkConfig);
+pub struct RemoraClientParameters(remora::config::BenchmarkParameters);
 
 impl Deref for RemoraClientParameters {
-    type Target = BenchmarkConfig;
+    type Target = remora::config::BenchmarkParameters;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -100,14 +100,28 @@ impl ProtocolCommands for RemoraProtocol {
     where
         I: Iterator<Item = &'a Instance>,
     {
-        let validator_config = &parameters.node_parameters;
-        let validator_config_string = serde_yaml::to_string(validator_config).unwrap();
+        // Build the validator configuration.
+        let first_node = instances.next().unwrap();
+        let mut proxy_server_address = remora::config::default_primary_address_for_proxies();
+        proxy_server_address.set_ip(IpAddr::V4(first_node.main_ip));
+        let mut client_server_address = remora::config::default_primary_address_for_clients();
+        client_server_address.set_ip(IpAddr::V4(first_node.main_ip));
+
+        let validator_config = ValidatorConfig {
+            proxy_server_address,
+            client_server_address,
+            metrics_address: remora::config::default_metrics_address(),
+            validator_parameters: parameters.node_parameters.deref().clone(),
+        };
+
+        let validator_config_string = serde_yaml::to_string(&validator_config).unwrap();
         let validator_config_path = self.working_dir.join("validator_config.yml");
         let upload_validator_config = format!(
             "echo -e '{validator_config_string}' > {}",
             validator_config_path.display()
         );
 
+        // Build the benchmark configuration.
         let benchmark_config = &parameters.client_parameters;
         let benchmark_config_string = serde_yaml::to_string(benchmark_config).unwrap();
         let benchmark_config_path = self.working_dir.join("benchmark_config.yml");
@@ -116,22 +130,12 @@ impl ProtocolCommands for RemoraProtocol {
             benchmark_config_path.display()
         );
 
-        let first_node = instances.next().unwrap();
-        let mut primary_address = remora::config::default_primary_address();
-        primary_address.set_ip(IpAddr::V4(first_node.main_ip));
-        let primary_address_path = self.working_dir.join("primary_address.yml");
-        let upload_primary_address = format!(
-            "echo -e '{primary_address}' > {}",
-            primary_address_path.display()
-        );
-
         let log = "export RUST_LOG=info";
         [
             "source $HOME/.cargo/env",
             log,
             &upload_validator_config,
             &upload_benchmark_config,
-            &upload_primary_address,
         ]
         .join(" && ")
     }
@@ -148,10 +152,6 @@ impl ProtocolCommands for RemoraProtocol {
         let benchmark_config_path = self.working_dir.join("benchmark_config.yml");
         let binding_address = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 
-        let instances: Vec<_> = instances.into_iter().collect();
-        let mut primary_address = remora::config::default_primary_address();
-        primary_address.set_ip(IpAddr::V4(instances[0].main_ip));
-
         instances
             .into_iter()
             .enumerate()
@@ -163,8 +163,6 @@ impl ProtocolCommands for RemoraProtocol {
                     format!("./{BINARY_PATH}/remora"),
                     format!("--validator-config {}", validator_config_path.display()),
                     format!("--benchmark-config {}", benchmark_config_path.display()),
-                    format!("--primary-address {primary_address}"),
-                    format!("--metrics-address {metrics_address}"),
                     format!("--binding-address {binding_address}"),
                 ];
 
@@ -190,8 +188,8 @@ impl ProtocolCommands for RemoraProtocol {
     where
         I: IntoIterator<Item = Instance>,
     {
+        let validator_config_path = self.working_dir.join("validator_config.yml");
         let benchmark_config_path = self.working_dir.join("benchmark_config.yml");
-        let primary_address_path = self.working_dir.join("primary_address.yml");
 
         let mut metrics_address = remora::load_generator::default_metrics_address();
         metrics_address.set_ip(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
@@ -201,8 +199,8 @@ impl ProtocolCommands for RemoraProtocol {
             .map(|instance| {
                 let run = [
                     format!("./{BINARY_PATH}/load_generator"),
+                    format!("--validator-config {}", validator_config_path.display()),
                     format!("--benchmark-config {}", benchmark_config_path.display()),
-                    format!("--primary-address {}", primary_address_path.display()),
                     format!("--metrics-address {metrics_address}"),
                 ];
 

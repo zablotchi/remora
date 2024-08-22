@@ -11,4 +11,4 @@ repository:
   commit: remora
 node_parameters_path: "crates/remora-orchestrator/assets/node-parameters.yml"
 client_parameters_path: "crates/remora-orchestrator/assets/client-parameters.yml"
-# dedicated_clients: 1
+dedicated_clients: 1

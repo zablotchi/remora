@@ -159,7 +159,7 @@ impl ProtocolCommands for RemoraProtocol {
                 if i == 0 {
                     run.push("primary".to_string());
                 } else {
-                    run.push(format!("proxy --proxy-id {i}"));
+                    run.push(format!("proxy {i}"));
                 };
 
                 let string = run.join(" ");
@@ -221,7 +221,7 @@ impl ProtocolMetrics for RemoraProtocol {
             .map(|instance| {
                 let mut metrics_address = remora::config::default_metrics_address();
                 metrics_address.set_ip(IpAddr::V4(instance.main_ip));
-                let metrics_path = format!("http://{metrics_address}/metrics");
+                let metrics_path = format!("{metrics_address}/metrics");
                 (instance, metrics_path)
             })
             .collect()
@@ -240,7 +240,7 @@ impl ProtocolMetrics for RemoraProtocol {
             .map(|instance| {
                 let mut metrics_address = remora::load_generator::default_metrics_address();
                 metrics_address.set_ip(IpAddr::V4(instance.main_ip));
-                let metrics_path = format!("http://{metrics_address}/metrics");
+                let metrics_path = format!("{metrics_address}/metrics");
                 (instance, metrics_path)
             })
             .collect()

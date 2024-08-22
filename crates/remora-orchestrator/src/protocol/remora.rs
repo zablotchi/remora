@@ -94,7 +94,7 @@ impl ProtocolCommands for RemoraProtocol {
 
     async fn genesis_command<'a, I>(
         &self,
-        _instances: I,
+        mut instances: I,
         parameters: &BenchmarkParameters,
     ) -> String
     where
@@ -116,12 +116,22 @@ impl ProtocolCommands for RemoraProtocol {
             benchmark_config_path.display()
         );
 
+        let first_node = instances.next().unwrap();
+        let mut primary_address = remora::config::default_primary_address();
+        primary_address.set_ip(IpAddr::V4(first_node.main_ip));
+        let primary_address_path = self.working_dir.join("primary_address.yml");
+        let upload_primary_address = format!(
+            "echo -e '{primary_address}' > {}",
+            primary_address_path.display()
+        );
+
         let log = "export RUST_LOG=info";
         [
             "source $HOME/.cargo/env",
             log,
             &upload_validator_config,
             &upload_benchmark_config,
+            &upload_primary_address,
         ]
         .join(" && ")
     }
@@ -180,8 +190,8 @@ impl ProtocolCommands for RemoraProtocol {
     where
         I: IntoIterator<Item = Instance>,
     {
-        let validator_config_path = self.working_dir.join("validator_config.yml");
         let benchmark_config_path = self.working_dir.join("benchmark_config.yml");
+        let primary_address_path = self.working_dir.join("primary_address.yml");
 
         let mut metrics_address = remora::load_generator::default_metrics_address();
         metrics_address.set_ip(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
@@ -190,9 +200,9 @@ impl ProtocolCommands for RemoraProtocol {
             .into_iter()
             .map(|instance| {
                 let run = [
-                    format!("./{BINARY_PATH}/load-generator"),
-                    format!("--validator-config {}", validator_config_path.display()),
+                    format!("./{BINARY_PATH}/load_generator"),
                     format!("--benchmark-config {}", benchmark_config_path.display()),
+                    format!("--primary-address {}", primary_address_path.display()),
                     format!("--metrics-address {metrics_address}"),
                 ];
 

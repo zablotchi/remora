@@ -116,8 +116,10 @@ impl ProtocolCommands for RemoraProtocol {
             benchmark_config_path.display()
         );
 
+        let log = "export RUST_LOG=info";
         [
             "source $HOME/.cargo/env",
+            log,
             &upload_validator_config,
             &upload_benchmark_config,
         ]
@@ -162,8 +164,9 @@ impl ProtocolCommands for RemoraProtocol {
                     run.push(format!("proxy {i}"));
                 };
 
+                let log = "export RUST_LOG=info";
                 let string = run.join(" ");
-                let command = ["source $HOME/.cargo/env", &string].join(" && ");
+                let command = ["source $HOME/.cargo/env", log, &string].join(" && ");
                 (instance, command)
             })
             .collect()
@@ -193,8 +196,9 @@ impl ProtocolCommands for RemoraProtocol {
                     format!("--metrics-address {metrics_address}"),
                 ];
 
+                let log = "export RUST_LOG=info";
                 let string = run.join(" ");
-                let command = ["source $HOME/.cargo/env", &string].join(" && ");
+                let command = ["source $HOME/.cargo/env", log, &string].join(" && ");
                 (instance, command)
             })
             .collect()

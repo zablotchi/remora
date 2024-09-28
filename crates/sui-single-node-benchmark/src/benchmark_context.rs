@@ -168,7 +168,7 @@ impl BenchmarkContext {
             .user_accounts
             .values()
             .take(num_shared_objects)
-            .map(|account| generator.generate_tx(account.clone()))
+            .flat_map(|account| generator.generate_txs(account.clone()))
             .collect();
         let results = self
             .execute_raw_transactions(shared_object_create_transactions)
@@ -222,11 +222,11 @@ impl BenchmarkContext {
             .map(|account| {
                 let account = account.clone();
                 let tx_generator = tx_generator.clone();
-                tokio::spawn(async move { tx_generator.generate_tx(account) })
+                tokio::spawn(async move { tx_generator.generate_txs(account) })
             })
             .collect();
         let results: Vec<_> = tasks.collect().await;
-        results.into_iter().map(|r| r.unwrap()).collect()
+        results.into_iter().flat_map(|r| r.unwrap()).collect()
     }
 
     pub async fn certify_transactions(

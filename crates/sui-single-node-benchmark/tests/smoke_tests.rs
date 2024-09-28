@@ -76,6 +76,31 @@ async fn benchmark_move_transactions_smoke_test() {
 }
 
 #[sim_test]
+async fn benchmark_counter_transactions_smoke_test() {
+    for skip_signing in [true, false] {
+        for component in Component::iter() {
+            if let Component::PipeTxsToChannel = component {
+                continue;
+            }
+            run_benchmark(
+                Workload::new(
+                    100,
+                    WorkloadKind::Counter {
+                        txs_per_counter: 10,
+                    },
+                ),
+                component,
+                1000,
+                false,
+                skip_signing,
+                None,
+            )
+            .await;
+        }
+    }
+}
+
+#[sim_test]
 async fn benchmark_batch_mint_smoke_test() {
     for skip_signing in [true, false] {
         for component in Component::iter() {

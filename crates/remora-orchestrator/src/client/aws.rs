@@ -11,14 +11,8 @@ use aws_sdk_ec2::{
     config::Region,
     primitives::Blob,
     types::{
-        BlockDeviceMapping,
-        EbsBlockDevice,
-        EphemeralNvmeSupport,
-        Filter,
-        ResourceType,
-        Tag,
-        TagSpecification,
-        VolumeType,
+        BlockDeviceMapping, EbsBlockDevice, EphemeralNvmeSupport, Filter, ResourceType, Tag,
+        TagSpecification, VolumeType,
     },
 };
 use aws_smithy_http::result::SdkError;

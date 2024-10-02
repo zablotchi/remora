@@ -112,6 +112,7 @@ impl ProtocolCommands for RemoraProtocol {
             client_server_address,
             metrics_address: remora::config::default_metrics_address(),
             validator_parameters: parameters.node_parameters.deref().clone(),
+            parallel_proxy: true,
         };
 
         let validator_config_string = serde_yaml::to_string(&validator_config).unwrap();

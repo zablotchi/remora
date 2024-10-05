@@ -216,7 +216,7 @@ impl ProtocolCommands for RemoraProtocol {
     fn gen_log_command<I>(
         &self,
         instances: I,
-        _parameters: &BenchmarkParameters,
+        parameters: &BenchmarkParameters,
     ) -> Vec<(Instance, String)>
     where
         I: IntoIterator<Item = Instance>,

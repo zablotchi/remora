@@ -183,6 +183,7 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
             "echo \"source $HOME/.cargo/env\" | tee -a ~/.bashrc",
             "source $HOME/.cargo/env",
             "rustup default stable",
+            //"ssh-keygen -t rsa -b 4096 -f $HOME/.ssh/id_rsa -N \"\"",
             // Create the working directory.
             &format!("mkdir -p {working_dir}"),
             // Clone the repo.
@@ -368,6 +369,74 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
 
         // Boot one node per instance.
         self.boot_nodes(nodes, parameters).await?;
+
+        display::done();
+        Ok(())
+    }
+
+    pub async fn prepare_logs_and_sync_with_nodes(
+        &self,
+        parameters: &BenchmarkParameters,
+    ) -> TestbedResult<()> {
+        display::action("\nPreparing txns logs");
+
+        // pick one client to gen the log
+        let (clients, nodes, _) = self.select_instances(parameters)?;
+        let log_gen_client = vec![clients[0].clone()];
+        let log_gen_target = self
+            .protocol_commands
+            .gen_log_command(log_gen_client, parameters);
+
+        let repo = self.settings.repository_name();
+        let context = CommandContext::new()
+            .run_background("prepare_log".into())
+            .with_log_file("~/prepare_log.log".into())
+            .with_execute_from_path(repo.clone().into());
+        self.ssh_manager
+            .execute_per_instance(log_gen_target, context)
+            .await?;
+
+        // forward the logs via scp to all other instances via the hop of the current machine
+        let source_log_ip = clients[1].main_ip;
+        let mut targets = if clients.len() > 1 {
+            clients[1..].to_vec()
+        } else {
+            Vec::new()
+        };
+        targets.extend(nodes);
+
+        display::action("\nSending txns logs to local machine");
+        let remote_log = format!("ubuntu@{}:/tmp/export/", source_log_ip);
+        let local_path = format!("/tmp");
+
+        let status = std::process::Command::new("scp -r")
+            .arg(&remote_log)
+            .arg(&local_path)
+            .status()
+            .expect("Failed to execute scp command for recv log");
+
+        if status.success() {
+            println!("Successfully recv log from {}", source_log_ip);
+        } else {
+            eprintln!("Failed to recv log from {}", source_log_ip);
+        }
+
+        display::action("\nSending txns logs to other nodes");
+        for host in targets {
+            let target_path = format!("ubuntu@{}:/tmp", host.main_ip);
+            let logs = format!("/tmp/export");
+            let status = std::process::Command::new("scp -r")
+                .arg(logs)
+                .arg(&target_path)
+                .status()
+                .expect("Failed to scp the log to the target machine");
+
+            if status.success() {
+                println!("Successfully scp the log to {}", host.main_ip);
+            } else {
+                eprintln!("Failed to scp the log to target machine {}", host.main_ip);
+            }
+        }
 
         display::done();
         Ok(())
@@ -598,6 +667,9 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
                 self.configure(&parameters).await?;
                 latest_committee_size = parameters.nodes;
             }
+
+            // Prepare the logs and send the logs to other nodes
+            self.prepare_logs_and_sync_with_nodes(&parameters).await?;
 
             // Deploy the validators.
             self.run_nodes(&parameters).await?;

@@ -65,6 +65,14 @@ pub trait ProtocolCommands {
     ) -> Vec<(Instance, String)>
     where
         I: IntoIterator<Item = Instance>;
+
+    fn gen_log_command<I>(
+        &self,
+        instances: I,
+        parameters: &BenchmarkParameters,
+    ) -> Vec<(Instance, String)>
+    where
+        I: IntoIterator<Item = Instance>;
 }
 
 /// The names of the minimum metrics exposed by the protocol that are required to

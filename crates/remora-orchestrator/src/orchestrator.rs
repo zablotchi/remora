@@ -397,7 +397,7 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
             .await?;
 
         // forward the logs via scp to all other instances via the hop of the current machine
-        let source_log_ip = clients[1].main_ip;
+        let source_log_ip = clients[0].main_ip;
         let mut targets = if clients.len() > 1 {
             clients[1..].to_vec()
         } else {
@@ -408,13 +408,18 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
         display::action("\nSending txns logs to local machine");
         let remote_log = format!("ubuntu@{}:/tmp/export/", source_log_ip);
         let local_path = format!("/tmp");
+        let home_dir = std::env::var("HOME").expect("Failed to get HOME environment variable");
+        let key_path = format!("{}/.ssh/aws", home_dir);
 
-        let status = std::process::Command::new("scp -r")
+        // Correct the way scp and its arguments are passed
+        let status = std::process::Command::new("scp")
+            .arg("-i")
+            .arg(&key_path) // Use the expanded key path
+            .arg("-r")
             .arg(&remote_log)
             .arg(&local_path)
             .status()
-            .expect("Failed to execute scp command for recv log");
-
+            .expect("Failed to execute scp command");
         if status.success() {
             println!("Successfully recv log from {}", source_log_ip);
         } else {
@@ -425,11 +430,14 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
         for host in targets {
             let target_path = format!("ubuntu@{}:/tmp", host.main_ip);
             let logs = format!("/tmp/export");
-            let status = std::process::Command::new("scp -r")
-                .arg(logs)
+            let status = std::process::Command::new("scp")
+                .arg("-i")
+                .arg(&key_path) // Use the expanded key path
+                .arg("-r")
+                .arg(&logs)
                 .arg(&target_path)
                 .status()
-                .expect("Failed to scp the log to the target machine");
+                .expect("Failed to execute scp command");
 
             if status.success() {
                 println!("Successfully scp the log to {}", host.main_ip);

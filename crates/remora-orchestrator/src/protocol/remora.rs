@@ -245,6 +245,26 @@ impl ProtocolCommands for RemoraProtocol {
             })
             .collect()
     }
+
+    fn get_log_path(&self, parameters: &BenchmarkParameters) -> String {
+        let log_dir = remora::executor::sui::LOG_DIR;
+        let log_dir_path: PathBuf = log_dir.into();
+
+        // TODO: copy from remora/src/exeuctor/sui.rs
+        // Create a separate dir to indicate workload
+        // the path is in the format of <log_dir>/<workload>/*.dat
+        // where <workload> is denoted by {txn_cnt}-{contention_level}
+        let mut cont_level: usize = 1;
+        let txn_cnt: u64 =
+            parameters.client_parameters.load * parameters.client_parameters.duration.as_secs();
+        if let remora::config::WorkloadType::SharedObjects { txs_per_counter } =
+            parameters.client_parameters.workload
+        {
+            cont_level = txs_per_counter;
+        }
+        let workload_path: PathBuf = log_dir_path.join(format!("{}-{}", txn_cnt, cont_level));
+        workload_path.to_str().unwrap().to_string()
+    }
 }
 
 impl ProtocolMetrics for RemoraProtocol {

@@ -386,18 +386,15 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
             .protocol_commands
             .gen_log_command(log_gen_client.clone(), parameters);
 
-        let id = "gen_log";
         let repo = self.settings.repository_name();
         let context = CommandContext::new()
             .run_background("prepare_log".into())
             .with_log_file("~/prepare_log.log".into())
             .with_execute_from_path(repo.clone().into());
         self.ssh_manager
-            .execute_per_instance(log_gen_target, context)
+            .execute_per_instance(log_gen_target.clone(), context)
             .await?;
-        self.ssh_manager
-            .wait_for_command(log_gen_client, id, CommandStatus::Terminated)
-            .await?;
+        self.ssh_manager.wait_for_success(log_gen_target).await;
 
         // forward the logs via scp to all other instances via the hop of the current machine
         let source_log_ip = clients[0].main_ip;

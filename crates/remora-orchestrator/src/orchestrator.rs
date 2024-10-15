@@ -379,21 +379,24 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
         parameters: &BenchmarkParameters,
     ) -> TestbedResult<()> {
         display::action("\nPreparing txns logs");
-
         // pick one client to gen the log
         let (clients, nodes, _) = self.select_instances(parameters)?;
         let log_gen_client = vec![clients[0].clone()];
         let log_gen_target = self
             .protocol_commands
-            .gen_log_command(log_gen_client, parameters);
+            .gen_log_command(log_gen_client.clone(), parameters);
 
+        let id = "gen_log";
         let repo = self.settings.repository_name();
         let context = CommandContext::new()
-            .run_background("prepare_log".into())
+            .run_background(id.into())
             .with_log_file("~/prepare_log.log".into())
             .with_execute_from_path(repo.clone().into());
         self.ssh_manager
             .execute_per_instance(log_gen_target, context)
+            .await?;
+        self.ssh_manager
+            .wait_for_command(log_gen_client, id, CommandStatus::Terminated)
             .await?;
 
         // forward the logs via scp to all other instances via the hop of the current machine
@@ -406,7 +409,8 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
         targets.extend(nodes);
 
         display::action("\nSending txns logs to local machine");
-        let remote_log = format!("ubuntu@{}:/tmp/export/", source_log_ip);
+        let workload_dir = self.protocol_commands.get_log_path(parameters);
+        let remote_log = format!("ubuntu@{}:{}", source_log_ip, workload_dir);
         let local_path = format!("/tmp");
         let home_dir = std::env::var("HOME").expect("Failed to get HOME environment variable");
         let key_path = format!("{}/.ssh/aws", home_dir);
@@ -429,7 +433,7 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
         display::action("\nSending txns logs to other nodes");
         for host in targets {
             let target_path = format!("ubuntu@{}:/tmp", host.main_ip);
-            let logs = format!("/tmp/export");
+            let logs = format!("{}", workload_dir);
             let status = std::process::Command::new("scp")
                 .arg("-i")
                 .arg(&key_path) // Use the expanded key path
@@ -446,6 +450,7 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
             }
         }
 
+        fs::remove_dir_all(&workload_dir).expect("Failed to delete working directory");
         display::done();
         Ok(())
     }
@@ -542,7 +547,7 @@ impl<P: ProtocolCommands + ProtocolMetrics> Orchestrator<P> {
                     fs::create_dir_all(&path).expect("Failed to create log directory");
                     aggregator.save(path);
 
-                    let benchmark_duration = parameters.settings.benchmark_duration.as_secs();
+                    let benchmark_duration = parameters.settings.benchmark_duration.as_secs() * 2;
                     if elapsed > benchmark_duration {
                         break;
                     }

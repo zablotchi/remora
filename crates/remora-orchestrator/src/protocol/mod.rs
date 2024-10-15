@@ -73,6 +73,8 @@ pub trait ProtocolCommands {
     ) -> Vec<(Instance, String)>
     where
         I: IntoIterator<Item = Instance>;
+
+    fn get_log_path(&self, parameters: &BenchmarkParameters) -> String;
 }
 
 /// The names of the minimum metrics exposed by the protocol that are required to

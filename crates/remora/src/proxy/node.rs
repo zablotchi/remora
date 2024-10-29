@@ -75,8 +75,8 @@ impl ProxyNode {
     pub fn await_completion(self) {
         for handle in self.core_handles {
             match handle.join() {
-                Ok(_) => println!("Thread completed successfully!"),
-                Err(e) => println!("Thread panicked: {:?}", e),
+                Ok(_) => tracing::info!("Thread completed successfully!"),
+                Err(e) => panic!("Thread panicked: {e:?}"),
             }
         }
     }

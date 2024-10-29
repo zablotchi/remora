@@ -196,18 +196,14 @@ impl<E: Executor> ProxyCore<E> {
 
         // spawn the custom runtime in a dedicated thread to ensure active
         std::thread::spawn(move || {
-            // Build a custom Tokio runtime with the specified number of worker threads
-            let rt = tokio::runtime::Builder::new_multi_thread()
+            // Build a custom Tokio runtime with the specified number of worker threads.
+            // Then block on the runtime to keep it alive and process tasks.
+            tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(num_threads)
                 .enable_all()
                 .build()
-                .unwrap();
-
-            // Block on the runtime to keep it alive and process tasks
-            rt.block_on(async move {
-                let _ = self.run().await;
-            });
-            Ok::<_, NodeError>(())
+                .expect("Failed to build runtime")
+                .block_on(self.run())
         })
     }
 }

@@ -43,6 +43,7 @@ impl ProxyNode {
 
             let store = Arc::new(executor.create_in_memory_store());
             executor.load_state_for_shared_objects().await;
+            // NOTE: If we run in multi-threaded mode, it is unclear why we need more than on ProxyCore.
             let core_handle = ProxyCore::new(
                 id,
                 executor.clone(),

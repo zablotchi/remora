@@ -4,6 +4,7 @@
 use std::{ops::Deref, sync::Arc};
 
 use rustc_hash::FxHashMap;
+use sui_types::{base_types::ObjectID, transaction::InputObjectKind};
 use tokio::{
     sync::mpsc::{Receiver, Sender},
     task::JoinHandle,
@@ -14,8 +15,6 @@ use crate::{
     executor::api::{ExecutableTransaction, Executor, Transaction},
     metrics::Metrics,
 };
-
-use sui_types::{base_types::ObjectID, transaction::InputObjectKind};
 
 /// A load balancer is responsible for distributing transactions to the consensus and proxies.
 pub struct LoadBalancer<E: Executor> {

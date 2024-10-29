@@ -5,9 +5,12 @@ use std::{io, sync::Arc};
 
 use tokio::{sync::mpsc, task::JoinHandle};
 
-use super::core::{ProxyCore, ProxyId, ProxyMode};
+use super::core::{ProxyCore, ProxyId};
 use crate::{
-    config::ValidatorConfig, error::NodeResult, executor::sui::SuiExecutor, metrics::Metrics,
+    config::ValidatorConfig,
+    error::NodeResult,
+    executor::sui::SuiExecutor,
+    metrics::Metrics,
     networking::client::NetworkClient,
 };
 
@@ -32,10 +35,6 @@ impl ProxyNode {
     ) -> Self {
         let mut core_handles = Vec::new();
         let mut network_handles = Vec::new();
-        let mode = match config.parallel_proxy {
-            false => ProxyMode::SingleThreaded,
-            true => ProxyMode::MultiThreaded,
-        };
 
         for i in 0..config.validator_parameters.collocated_pre_executors.proxy {
             let id = format!("{proxy_id}-{i}");
@@ -47,7 +46,7 @@ impl ProxyNode {
             let core_handle = ProxyCore::new(
                 id,
                 executor.clone(),
-                mode,
+                config.validator_parameters.proxy_mode.clone(),
                 store,
                 rx_transactions,
                 tx_proxy_results,

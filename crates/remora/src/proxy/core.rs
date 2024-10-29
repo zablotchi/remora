@@ -10,6 +10,7 @@ use tokio::{
 };
 
 use crate::{
+    config::ProxyMode,
     error::{NodeError, NodeResult},
     executor::{
         api::{ExecutableTransaction, ExecutionResults, Executor, Store, Transaction},
@@ -19,12 +20,6 @@ use crate::{
 };
 
 pub type ProxyId = String;
-
-#[derive(Clone, Copy)]
-pub enum ProxyMode {
-    SingleThreaded,
-    MultiThreaded,
-}
 
 /// A proxy is responsible for pre-executing transactions.
 pub struct ProxyCore<E: Executor> {

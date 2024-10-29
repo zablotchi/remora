@@ -3,7 +3,8 @@
 
 use std::{
     fmt::Debug,
-    fs, io,
+    fs,
+    io,
     net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener},
     path::Path,
     time::Duration,
@@ -52,6 +53,13 @@ pub fn default_metrics_address() -> SocketAddr {
     SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 18502)
 }
 
+#[derive(Clone, Copy, Default, Serialize, Deserialize)]
+pub enum ProxyMode {
+    SingleThreaded,
+    #[default]
+    MultiThreaded,
+}
+
 /// Configuration to collocate pre-executors.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct CollocatedPreExecutors {
@@ -66,14 +74,17 @@ pub struct CollocatedPreExecutors {
 pub struct ValidatorParameters {
     /// The number of collocated pre-executors to use. That is, the number of pre-executor running on
     /// the same machine as the primary and on the same machine as each proxy.
-    #[serde(default = "default_validator_config::default_collocated_pre_executors")]
+    #[serde(default = "default_validator_parameters::default_collocated_pre_executors")]
     pub collocated_pre_executors: CollocatedPreExecutors,
     /// The consensus delay model.
-    #[serde(default = "default_validator_config::default_consensus_delay_model")]
+    #[serde(default = "default_validator_parameters::default_consensus_delay_model")]
     pub consensus_delay_model: FixedDelay,
     /// The consensus parameters.
-    #[serde(default = "default_validator_config::default_consensus_parameters")]
+    #[serde(default = "default_validator_parameters::default_consensus_parameters")]
     pub consensus_parameters: MockConsensusParameters,
+    /// The execution mode of the proxies. This is used for benchmark and exploring different configurations.
+    #[serde(default)]
+    pub proxy_mode: ProxyMode,
 }
 
 impl ValidatorParameters {
@@ -83,7 +94,7 @@ impl ValidatorParameters {
     }
 }
 
-mod default_validator_config {
+mod default_validator_parameters {
     use super::CollocatedPreExecutors;
     use crate::primary::mock_consensus::{models::FixedDelay, MockConsensusParameters};
 
@@ -106,9 +117,11 @@ mod default_validator_config {
 impl Default for ValidatorParameters {
     fn default() -> Self {
         ValidatorParameters {
-            collocated_pre_executors: default_validator_config::default_collocated_pre_executors(),
-            consensus_delay_model: default_validator_config::default_consensus_delay_model(),
-            consensus_parameters: default_validator_config::default_consensus_parameters(),
+            collocated_pre_executors:
+                default_validator_parameters::default_collocated_pre_executors(),
+            consensus_delay_model: default_validator_parameters::default_consensus_delay_model(),
+            consensus_parameters: default_validator_parameters::default_consensus_parameters(),
+            proxy_mode: ProxyMode::default(),
         }
     }
 }
@@ -127,8 +140,6 @@ pub struct ValidatorConfig {
     pub metrics_address: SocketAddr,
     /// The parameters for the validator.
     pub validator_parameters: ValidatorParameters,
-    /// The execution mode of proxy.
-    pub parallel_proxy: bool,
 }
 
 impl ValidatorConfig {
@@ -139,7 +150,6 @@ impl ValidatorConfig {
             client_server_address: get_test_address(),
             metrics_address: get_test_address(),
             validator_parameters: ValidatorParameters::new_for_tests(),
-            parallel_proxy: true,
         }
     }
 }

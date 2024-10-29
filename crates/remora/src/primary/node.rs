@@ -15,7 +15,7 @@ use crate::{
     executor::sui::{SuiExecutionResults, SuiExecutor, SuiTransaction},
     metrics::Metrics,
     networking::server::NetworkServer,
-    proxy::core::{ProxyCore, ProxyMode},
+    proxy::core::ProxyCore,
 };
 
 /// Default channel size for communication between components.
@@ -75,11 +75,6 @@ impl PrimaryNode {
         )
         .spawn();
 
-        let mode = match config.parallel_proxy {
-            false => ProxyMode::SingleThreaded,
-            true => ProxyMode::MultiThreaded,
-        };
-
         // Boot the local proxies. Additional proxies can still remotely connect. Proxies
         // receive transactions in parallel with the consensus for pre-execution.
         for i in 0..config.validator_parameters.collocated_pre_executors.primary {
@@ -90,7 +85,7 @@ impl PrimaryNode {
             ProxyCore::new(
                 proxy_id,
                 executor.clone(),
-                mode,
+                config.validator_parameters.proxy_mode.clone(),
                 store,
                 rx,
                 tx_proxy_results.clone(),
@@ -170,7 +165,10 @@ mod tests {
 
     use crate::{
         config::{
-            BenchmarkParameters, CollocatedPreExecutors, ValidatorConfig, ValidatorParameters,
+            BenchmarkParameters,
+            CollocatedPreExecutors,
+            ValidatorConfig,
+            ValidatorParameters,
         },
         executor::sui::SuiExecutor,
         load_generator::LoadGenerator,

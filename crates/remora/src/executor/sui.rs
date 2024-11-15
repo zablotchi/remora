@@ -19,6 +19,7 @@ use sui_types::{
     effects::{TransactionEffects, TransactionEffectsAPI},
     executable_transaction::VerifiedExecutableTransaction,
     object::Object,
+    storage::ObjectStore,
     transaction::{CertifiedTransaction, InputObjectKind, TransactionDataAPI, VerifiedCertificate},
 };
 use tokio::time::Instant;
@@ -48,6 +49,13 @@ impl ExecutableTransaction for CertifiedTransaction {
 impl StateStore<TransactionEffects> for InMemoryObjectStore {
     fn commit_objects(&self, updates: TransactionEffects, new_state: BTreeMap<ObjectID, Object>) {
         self.commit_effects(updates, new_state);
+    }
+
+    fn read_object(
+        &self,
+        id: &ObjectID,
+    ) -> Result<Option<Object>, sui_types::storage::error::Error> {
+        self.get_object(id)
     }
 }
 

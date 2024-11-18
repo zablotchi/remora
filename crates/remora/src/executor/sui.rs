@@ -3,18 +3,22 @@
 
 use std::{
     collections::{BTreeMap, HashSet},
+    fs,
+    io::{BufReader, Read},
     ops::Deref,
+    path::PathBuf,
     sync::Arc,
 };
 
 use sui_single_node_benchmark::{
     benchmark_context::BenchmarkContext,
     command::{Component, WorkloadKind},
+    mock_account::Account,
     mock_storage::InMemoryObjectStore,
     workload::Workload,
 };
 use sui_types::{
-    base_types::ObjectID,
+    base_types::{ObjectID, SuiAddress},
     digests::TransactionDigest,
     effects::{TransactionEffects, TransactionEffectsAPI},
     executable_transaction::VerifiedExecutableTransaction,
@@ -108,15 +112,6 @@ pub async fn generate_transactions(config: &BenchmarkParameters) -> Vec<Certifie
 
     transactions
 }
-
-use std::{
-    fs,
-    io::{BufReader, Read},
-    path::PathBuf,
-};
-
-use sui_single_node_benchmark::mock_account::Account;
-use sui_types::base_types::SuiAddress;
 
 pub fn export_to_files(
     accounts: &BTreeMap<SuiAddress, Account>,
@@ -270,6 +265,7 @@ impl Executor for SuiExecutor {
     type Transaction = CertifiedTransaction;
     type ExecutionResults = TransactionEffects;
     type Store = InMemoryObjectStore;
+    type ExecutionContext = BenchmarkContext;
 
     fn context(&self) -> Arc<BenchmarkContext> {
         self.ctx.clone()

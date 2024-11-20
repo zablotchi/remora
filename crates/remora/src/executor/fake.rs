@@ -242,7 +242,7 @@ impl FakeExecutionContext {
 
     /// Calibrate the fake executor to run for the target_duration
     fn calibrate(target_duration: Duration) -> u64 {
-        let mut iterations = 10_00_000;
+        let mut iterations = 1_000_000;
         let mut step_size = iterations;
 
         loop {

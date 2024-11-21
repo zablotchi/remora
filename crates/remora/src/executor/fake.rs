@@ -30,12 +30,23 @@ use super::api::{
     TransactionWithTimestamp,
 };
 
-/// A fake objects for testing.
+/// A fake owned object for testing.
 pub fn fake_owned_object(version: u64) -> Object {
     let id = ObjectID::random();
     let object_version = SequenceNumber::from_u64(version);
     let owner = SuiAddress::random_for_testing_only();
     Object::with_id_owner_version_for_testing(id, object_version, owner)
+}
+
+/// A fake shared object for testing.
+pub fn fake_shared_object(version: u64) -> Object {
+    let id = ObjectID::random();
+    let object_version = SequenceNumber::from_u64(version);
+    let obj = MoveObject::new_gas_coin(object_version, id, 10);
+    let owner = Owner::Shared {
+        initial_shared_version: obj.version(),
+    };
+    Object::new_move(obj, owner, TransactionDigest::genesis_marker())
 }
 
 #[derive(Clone)]
@@ -50,6 +61,31 @@ impl FakeTransaction {
             digest: TransactionDigest::random(),
             inputs,
         }
+    }
+
+    pub fn from_store(
+        store: &FakeObjectStore<FakeTransactionEffects>,
+        inputs: Vec<ObjectID>,
+    ) -> Self {
+        let inputs = inputs
+            .iter()
+            .map(|id| {
+                let object = store
+                    .read_object(id)
+                    .expect("Failed to access store")
+                    .expect(&format!("Unknown object {id}"));
+                if object.is_shared() {
+                    InputObjectKind::SharedMoveObject {
+                        id: object.id(),
+                        initial_shared_version: object.version(),
+                        mutable: true,
+                    }
+                } else {
+                    InputObjectKind::ImmOrOwnedMoveObject(object.compute_object_reference())
+                }
+            })
+            .collect();
+        Self::new(inputs)
     }
 }
 
@@ -377,6 +413,7 @@ mod tests {
         api::{Executor, TransactionWithTimestamp},
         fake::{
             fake_owned_object,
+            fake_shared_object,
             FakeExecutionContext,
             FakeExecutor,
             FakeObjectStore,
@@ -412,7 +449,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn execute_fake_transaction() {
+    async fn execute_fake_owned_object_transaction() {
         let store = Arc::new(FakeObjectStore::new());
         let execution_duration = Duration::from_millis(3);
         let checks_duration = Duration::from_millis(1);
@@ -423,12 +460,40 @@ mod tests {
         let inputs: Vec<_> = (0..2)
             .map(|_| {
                 let object = fake_owned_object(0);
-                let reference = object.compute_object_reference();
+                let id = object.id();
                 store.write_object(object);
-                InputObjectKind::ImmOrOwnedMoveObject(reference)
+                id
             })
             .collect();
-        let transaction = FakeTransaction::new(inputs);
+        let transaction = FakeTransaction::from_store(&store, inputs);
+        let transaction_with_timestamp = TransactionWithTimestamp::new(transaction, 0.0);
+
+        let start = Instant::now();
+        let result = FakeExecutor::execute(ctx, store, &transaction_with_timestamp).await;
+        let duration = start.elapsed();
+
+        assert!(result.success());
+        assert!(duration >= execution_duration);
+    }
+
+    #[tokio::test]
+    async fn execute_fake_shared_object_transaction() {
+        let store = Arc::new(FakeObjectStore::new());
+        let execution_duration = Duration::from_millis(3);
+        let checks_duration = Duration::from_millis(1);
+        let execution_context = FakeExecutionContext::new(execution_duration, checks_duration);
+        let executor = FakeExecutor::new(execution_context);
+        let ctx = executor.context();
+
+        let inputs: Vec<_> = (0..2)
+            .map(|_| {
+                let object = fake_shared_object(0);
+                let id = object.id();
+                store.write_object(object);
+                id
+            })
+            .collect();
+        let transaction = FakeTransaction::from_store(&store, inputs);
         let transaction_with_timestamp = TransactionWithTimestamp::new(transaction, 0.0);
 
         let start = Instant::now();

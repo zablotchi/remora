@@ -45,10 +45,10 @@ The documentation of the `Settings` struct in `./src/settings.rs` provides detai
 
 ## Step 3. Create a testbed
 
-The orchestrator binary provides various functionalities for creating, starting, stopping, and destroying instances. You can use the following command to boot 2 instances per region (if the settings file specifies 10 regions, as shown in the example above, a total of 20 instances will be created):
+The orchestrator binary provides various functionalities for creating, starting, stopping, and destroying instances. You can use the following command to boot 4 instances per region (including one client machine, one primary, one proxy, and one metrics collector):
 
 ```bash
-cargo run --bin remora-orchestrator -- testbed deploy --instances 2
+cargo run --bin remora-orchestrator -- testbed deploy --instances 4
 ```
 
 To check the current status of the testbed instances, use the following command:
@@ -61,10 +61,10 @@ Instances listed with a green number are available and ready for use, while inst
 
 ## Step 4. Running benchmarks
 
-Running benchmarks involves installing the specified version of the codebase on the remote machines and running one validator and one load generator per instance. For example, the following command benchmarks a committee of 10 validators under a constant load of 200 tx/s for 3 minutes:
+Running benchmarks involves installing the specified version of the codebase on the remote machines and running one validator and one load generator per instance. For example, the following command benchmarks a committee of 1 primary ndoe and 1 proxy node under a constant load of 200 tx/s for 3 minutes:
 
 ```bash
-cargo run --bin remora-orchestrator -- benchmark --committee 10 fixed-load --loads 200 --duration 180
+cargo run --bin remora-orchestrator -- benchmark --committee 2 --loads 200
 ```
 
 In a network of 10 validators, each with a corresponding load generator, each load generator submits a fixed load of 20 tx/s. Performance measurements are collected by regularly scraping the Prometheus metrics exposed by the load generators. The `orchestrator` binary provides additional commands to run a specific number of load generators on separate machines.

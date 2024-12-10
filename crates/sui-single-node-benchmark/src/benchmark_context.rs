@@ -11,11 +11,7 @@ use futures::{stream::FuturesUnordered, StreamExt};
 use sui_config::node::RunWithRange;
 use sui_test_transaction_builder::PublishData;
 use sui_types::{
-    base_types::{ObjectID, ObjectRef, SequenceNumber, SuiAddress},
-    effects::{TransactionEffects, TransactionEffectsAPI},
-    messages_grpc::HandleTransactionResponse,
-    mock_checkpoint_builder::ValidatorKeypairProvider,
-    transaction::{CertifiedTransaction, SignedTransaction, Transaction, VerifiedTransaction},
+    base_types::{ObjectID, ObjectRef, SequenceNumber, SuiAddress}, committee::Committee, effects::{TransactionEffects, TransactionEffectsAPI}, messages_grpc::HandleTransactionResponse, mock_checkpoint_builder::ValidatorKeypairProvider, transaction::{CertifiedTransaction, SignedTransaction, Transaction, VerifiedTransaction}
 };
 use tokio::sync::mpsc::Sender;
 use tracing::info;
@@ -74,6 +70,10 @@ impl BenchmarkContext {
 
     pub fn validator(&self) -> SingleValidator {
         self.validator.clone()
+    }
+
+    pub fn get_committee(&self) -> &Committee {
+        self.validator.get_committee()
     }
 
     pub fn get_accounts(&self) -> &BTreeMap<SuiAddress, Account> {

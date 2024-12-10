@@ -400,6 +400,17 @@ impl Executor for FakeExecutor {
         }
         true
     }
+
+    // busy loop to simulate transaction verification
+    fn verify_transaction(
+            ctx: Arc<FakeExecutionContext>, 
+            _transaction: &TransactionWithTimestamp<Self::Transaction>,
+        ) -> bool {
+        for _ in 0..ctx.checks_spins {
+            std::hint::spin_loop();
+        }
+        true
+    }
 }
 
 #[cfg(test)]

@@ -339,6 +339,13 @@ impl Executor for SuiExecutor {
             .read_objects_for_execution(&**epoch_store, &transaction.key(), &input_objects)
             .is_ok()
     }
+
+    fn verify_transaction(
+            ctx: Arc<BenchmarkContext>,
+            transaction: &super::api::TransactionWithTimestamp<Self::Transaction>,
+        ) -> bool {
+        transaction.deref().clone().try_into_verified_for_testing(ctx.get_committee(), &Default::default()).is_ok()
+    }
 }
 
 #[cfg(test)]

@@ -71,25 +71,32 @@ impl<T: ExecutableTransaction + Clone> Deref for TransactionWithTimestamp<T> {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExecutionResultsAndEffects<U: Clone + Debug> {
-    pub updates: U,
+    pub updates: Option<U>,
     pub new_state: BTreeMap<ObjectID, Object>,
+    pub authentication_success: bool,
+    // we need the transaction digest here because a transaction that fails authentication will not have any TransactionEffects (and therefore no way for the primary to know which transaction this is)
+    pub transaction_digest: TransactionDigest,
 }
 
 impl<U: TransactionEffectsAPI + Clone + Debug> ExecutionResultsAndEffects<U> {
     pub fn new(updates: U, new_state: BTreeMap<ObjectID, Object>) -> Self {
-        Self { updates, new_state }
+        Self { updates:Some(updates.clone()), new_state, authentication_success: true, transaction_digest: *updates.transaction_digest() }
+    }
+
+    pub fn new_from_failed_verification(transaction_digest: TransactionDigest) -> Self {
+        Self { updates: None, new_state: BTreeMap::new(), authentication_success: false, transaction_digest }
     }
 
     pub fn success(&self) -> bool {
-        self.updates.status().is_ok()
+        self.authentication_success && self.updates.as_ref().unwrap().status().is_ok()
     }
 
     pub fn transaction_digest(&self) -> &TransactionDigest {
-        self.updates.transaction_digest()
+        &self.transaction_digest
     }
 
     pub fn modified_at_versions(&self) -> Vec<(ObjectID, SequenceNumber)> {
-        self.updates.modified_at_versions()
+        self.updates.as_ref().unwrap().modified_at_versions()
     }
 }
 
@@ -127,6 +134,12 @@ pub trait Executor {
     fn pre_execute_check(
         ctx: Arc<Self::ExecutionContext>,
         store: Arc<Self::Store>,
+        transaction: &TransactionWithTimestamp<Self::Transaction>,
+    ) -> bool;
+
+    /// Verify the transaction authentication prior to execution
+    fn verify_transaction(
+        ctx: Arc<Self::ExecutionContext>,
         transaction: &TransactionWithTimestamp<Self::Transaction>,
     ) -> bool;
 }

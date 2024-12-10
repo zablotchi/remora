@@ -86,6 +86,10 @@ impl<E: Executor> PrimaryCore<E> {
         let mut skip = true;
 
         if let Some((_, proxy_result)) = proxy_results.remove(transaction.deref().digest()) {
+            // if the transaction failed authentication in the proxy, we don't need to go further. We can directly return the result.
+            if !proxy_result.authentication_success {
+                return proxy_result;
+            }
             let initial_state = self.get_input_objects(transaction);
             for (id, vid) in &proxy_result.modified_at_versions() {
                 let (_, v, _) = initial_state
@@ -98,7 +102,7 @@ impl<E: Executor> PrimaryCore<E> {
             if skip {
                 let effects = proxy_result.clone();
                 self.store
-                    .commit_objects(effects.updates, effects.new_state);
+                    .commit_objects(effects.updates.unwrap(), effects.new_state);
                 return proxy_result;
             }
         }
@@ -160,7 +164,7 @@ mod tests {
     use crate::{
         config::BenchmarkParameters,
         executor::{
-            api::Executor,
+            api::{ExecutionResultsAndEffects, Executor},
             sui::{generate_transactions, SuiExecutor, SuiTransaction},
         },
         primary::core::PrimaryCore,
@@ -209,6 +213,51 @@ mod tests {
         for _ in 0..total_transactions {
             let (_, result) = rx_output.recv().await.unwrap();
             assert!(result.success());
+        }
+    }
+
+    #[tokio::test]
+    #[tracing_test::traced_test]
+    async fn merge_results_unsigned() {
+        let (tx_commit, rx_commit) = mpsc::channel(100);
+        let (tx_results, rx_results) = mpsc::channel(100);
+        let (tx_output, mut rx_output) = mpsc::channel(100);
+
+        // Generate transactions.
+        let config = BenchmarkParameters::new_for_tests();
+        let executor = SuiExecutor::new(&config).await;
+        let transactions: Vec<_> = generate_transactions(&config)
+            .await
+            .into_iter()
+            .map(|tx| SuiTransaction::new_for_tests(tx))
+            .collect();
+        let total_transactions = transactions.len();
+
+        // Pre-execute the transactions.
+        let mut proxy_results = Vec::new();
+
+        for tx in transactions.clone() {
+            let results = ExecutionResultsAndEffects::new_from_failed_verification(*tx.digest());
+            proxy_results.push(results);
+        }
+
+        // Boot the primary executor.
+        let store = Arc::new(executor.create_in_memory_store());
+        PrimaryCore::new(executor, store, rx_commit, rx_results, tx_output).spawn();
+
+        // Merge the proxy results into the primary.
+        for r in proxy_results {
+            tx_results.send(r).await.unwrap();
+        }
+        tokio::task::yield_now().await;
+
+        // Send the transactions to the primary executor.
+        tx_commit.send(transactions).await.unwrap();
+
+        // Check the results.
+        for _ in 0..total_transactions {
+            let (_, result) = rx_output.recv().await.unwrap();
+            assert!(!result.success());
         }
     }
 }

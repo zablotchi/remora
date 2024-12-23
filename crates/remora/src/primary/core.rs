@@ -96,8 +96,9 @@ impl<E: Executor> PrimaryCore<E> {
             }
             if skip {
                 let effects = proxy_result.clone();
-                self.store
-                    .commit_objects(effects.updates.unwrap(), effects.new_state);
+                if let Some(updates) = effects.updates {
+                    self.store.commit_objects(updates, effects.new_state);
+                }
                 return proxy_result;
             }
         }
@@ -167,6 +168,7 @@ mod tests {
 
     #[tokio::test]
     #[tracing_test::traced_test]
+    // Test the merging of results from the proxy and the primary executor when transactions are correctly signed.
     async fn merge_results() {
         let (tx_commit, rx_commit) = mpsc::channel(100);
         let (tx_results, rx_results) = mpsc::channel(100);
@@ -213,6 +215,7 @@ mod tests {
 
     #[tokio::test]
     #[tracing_test::traced_test]
+    // Test the merging of results from the proxy and the primary executor when transactions are not correctly signed.
     async fn merge_results_unsigned() {
         let (tx_commit, rx_commit) = mpsc::channel(100);
         let (tx_results, rx_results) = mpsc::channel(100);

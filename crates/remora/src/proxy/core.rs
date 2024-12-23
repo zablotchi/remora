@@ -142,42 +142,47 @@ impl<E: Executor> ProxyCore<E> {
                     let ctx = ctx.clone();
                     let metrics = self.metrics.clone();
                     tokio::spawn(async move {
-                        for prior_notify in prior_handles {
-                            prior_notify.notified().await;
-                        }
-
-                        // check the version ID for shared objects
-                        // skip if versions don't match
-                        let mut ready_to_execute = true;
-                        if transaction.input_objects().iter().any(|input_object| {
-                            matches!(
-                                input_object,
-                                InputObjectKind::SharedMoveObject {
-                                    id: _,
-                                    initial_shared_version: _,
-                                    mutable: _,
-                                }
-                            )
-                        }) && !E::pre_execute_check(ctx.clone(), store.clone(), &transaction)
+                        // verify the transaction before any other scheduling work
+                        // if the transaction fails authentication, we don't need to execute
+                        let execution_result = if !E::verify_transaction(ctx.clone(), &transaction)
                         {
-                            ready_to_execute = false;
-                        }
-
-                        if ready_to_execute {
-                            // TODO igor: perhaps we can move the authentication verification earlier, so as not to waste time and resources on scheduling a tx that will fail authentication anyway
-                            let execution_result =
-                                if !E::verify_transaction(ctx.clone(), &transaction) {
-                                    ExecutionResults::<E>::new_from_failed_verification(
-                                        *transaction.digest(),
-                                    )
-                                } else {
-                                    E::execute(ctx, store, &transaction).await
-                                };
-
-                            for notify in current_handles {
-                                notify.notify_one();
+                            Some(ExecutionResults::<E>::new_from_failed_verification(
+                                *transaction.digest(),
+                            ))
+                        } else {
+                            for prior_notify in prior_handles {
+                                prior_notify.notified().await;
                             }
 
+                            // check the version ID for shared objects
+                            // skip if versions don't match
+                            let mut ready_to_execute = true;
+                            if transaction.input_objects().iter().any(|input_object| {
+                                matches!(
+                                    input_object,
+                                    InputObjectKind::SharedMoveObject {
+                                        id: _,
+                                        initial_shared_version: _,
+                                        mutable: _,
+                                    }
+                                )
+                            }) && !E::pre_execute_check(ctx.clone(), store.clone(), &transaction)
+                            {
+                                ready_to_execute = false;
+                            }
+
+                            if ready_to_execute {
+                                Some(E::execute(ctx, store, &transaction).await)
+                            } else {
+                                None
+                            }
+                        };
+
+                        for notify in current_handles {
+                            notify.notify_one();
+                        }
+
+                        if let Some(execution_result) = execution_result {
                             tx_results
                                 .send(execution_result)
                                 .await
@@ -243,6 +248,7 @@ mod tests {
         proxy::core::{ProxyCore, ProxyMode},
     };
 
+    // Helper function to generate signed transactions for testing.
     async fn new_signed_txs() -> Vec<SuiTransaction> {
         let config = BenchmarkParameters::new_for_tests();
         // Send transactions to the proxy.
@@ -253,6 +259,7 @@ mod tests {
             .collect::<Vec<_>>()
     }
 
+    // Helper function to generate unsigned transactions for testing.
     async fn new_unsigned_txs() -> Vec<SuiTransaction> {
         let config = BenchmarkParameters::new_for_tests();
 
@@ -271,6 +278,8 @@ mod tests {
             .collect::<Vec<_>>()
     }
 
+    // Helper function to test transaction pre-execution. In signed mode, we expect the transactions to be
+    // successfully executed. In unsigned mode, we expect the transactions to fail execution.
     async fn pre_execute(mode: ProxyMode, signed: bool) {
         let (tx_proxy, rx_proxy) = mpsc::channel(100);
         let (tx_results, mut rx_results) = mpsc::channel(100);
@@ -313,21 +322,25 @@ mod tests {
     }
 
     #[tokio::test]
+    // Test the succesful pre-execution of signed transactions in single-threaded proxy mode.
     async fn test_single_threaded_proxy_signed() {
         pre_execute(ProxyMode::SingleThreaded, true).await;
     }
 
     #[tokio::test]
+    // Test the succesful pre-execution of signed transactions in multi-threaded proxy mode.
     async fn test_multi_threaded_proxy_signed() {
         pre_execute(ProxyMode::MultiThreaded, true).await;
     }
 
     #[tokio::test]
+    // Test that pre-execution fails on signed transactions in single-threaded proxy mode.
     async fn test_single_threaded_proxy_unsigned() {
         pre_execute(ProxyMode::SingleThreaded, false).await;
     }
 
     #[tokio::test]
+    // Test that pre-execution fails on signed transactions in multi-threaded proxy mode.
     async fn test_multi_threaded_proxy_unsigned() {
         pre_execute(ProxyMode::MultiThreaded, false).await;
     }

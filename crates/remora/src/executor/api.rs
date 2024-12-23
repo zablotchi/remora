@@ -98,7 +98,13 @@ impl<U: TransactionEffectsAPI + Clone + Debug> ExecutionResultsAndEffects<U> {
     }
 
     pub fn success(&self) -> bool {
-        self.authentication_success && self.updates.as_ref().unwrap().status().is_ok()
+        if self.authentication_success {
+            if let Some(updates) = &self.updates {
+                return updates.status().is_ok();
+            }
+            return false;
+        }
+        false
     }
 
     pub fn transaction_digest(&self) -> &TransactionDigest {
@@ -106,7 +112,11 @@ impl<U: TransactionEffectsAPI + Clone + Debug> ExecutionResultsAndEffects<U> {
     }
 
     pub fn modified_at_versions(&self) -> Vec<(ObjectID, SequenceNumber)> {
-        self.updates.as_ref().unwrap().modified_at_versions()
+        if let Some(updates) = &self.updates {
+            updates.modified_at_versions()
+        } else {
+            vec![]
+        }
     }
 }
 

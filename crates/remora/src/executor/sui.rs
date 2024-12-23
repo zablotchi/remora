@@ -344,6 +344,7 @@ impl Executor for SuiExecutor {
         ctx: Arc<BenchmarkContext>,
         transaction: &super::api::TransactionWithTimestamp<Self::Transaction>,
     ) -> bool {
+        // Verify the transaction using default verify parameters (&Default::default())
         transaction
             .deref()
             .clone()

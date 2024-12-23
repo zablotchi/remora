@@ -7,10 +7,7 @@ use tokio::{sync::mpsc, task::JoinHandle};
 
 use super::core::{ProxyCore, ProxyId};
 use crate::{
-    config::ValidatorConfig,
-    error::NodeResult,
-    executor::sui::SuiExecutor,
-    metrics::Metrics,
+    config::ValidatorConfig, error::NodeResult, executor::sui::SuiExecutor, metrics::Metrics,
     networking::client::NetworkClient,
 };
 

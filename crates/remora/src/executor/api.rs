@@ -80,11 +80,21 @@ pub struct ExecutionResultsAndEffects<U: Clone + Debug> {
 
 impl<U: TransactionEffectsAPI + Clone + Debug> ExecutionResultsAndEffects<U> {
     pub fn new(updates: U, new_state: BTreeMap<ObjectID, Object>) -> Self {
-        Self { updates:Some(updates.clone()), new_state, authentication_success: true, transaction_digest: *updates.transaction_digest() }
+        Self {
+            updates: Some(updates.clone()),
+            new_state,
+            authentication_success: true,
+            transaction_digest: *updates.transaction_digest(),
+        }
     }
 
     pub fn new_from_failed_verification(transaction_digest: TransactionDigest) -> Self {
-        Self { updates: None, new_state: BTreeMap::new(), authentication_success: false, transaction_digest }
+        Self {
+            updates: None,
+            new_state: BTreeMap::new(),
+            authentication_success: false,
+            transaction_digest,
+        }
     }
 
     pub fn success(&self) -> bool {

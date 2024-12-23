@@ -165,10 +165,7 @@ mod tests {
 
     use crate::{
         config::{
-            BenchmarkParameters,
-            CollocatedPreExecutors,
-            ValidatorConfig,
-            ValidatorParameters,
+            BenchmarkParameters, CollocatedPreExecutors, ValidatorConfig, ValidatorParameters,
         },
         executor::sui::SuiExecutor,
         load_generator::LoadGenerator,

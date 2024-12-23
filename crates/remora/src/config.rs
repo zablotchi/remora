@@ -3,8 +3,7 @@
 
 use std::{
     fmt::Debug,
-    fs,
-    io,
+    fs, io,
     net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener},
     path::Path,
     time::Duration,

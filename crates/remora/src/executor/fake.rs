@@ -23,10 +23,7 @@ use sui_types::{
 use tokio::time::Instant;
 
 use super::api::{
-    ExecutableTransaction,
-    ExecutionResultsAndEffects,
-    Executor,
-    StateStore,
+    ExecutableTransaction, ExecutionResultsAndEffects, Executor, StateStore,
     TransactionWithTimestamp,
 };
 
@@ -403,9 +400,9 @@ impl Executor for FakeExecutor {
 
     // busy loop to simulate transaction verification
     fn verify_transaction(
-            ctx: Arc<FakeExecutionContext>, 
-            _transaction: &TransactionWithTimestamp<Self::Transaction>,
-        ) -> bool {
+        ctx: Arc<FakeExecutionContext>,
+        _transaction: &TransactionWithTimestamp<Self::Transaction>,
+    ) -> bool {
         for _ in 0..ctx.checks_spins {
             std::hint::spin_loop();
         }
@@ -423,12 +420,8 @@ mod tests {
     use crate::executor::{
         api::{Executor, TransactionWithTimestamp},
         fake::{
-            fake_owned_object,
-            fake_shared_object,
-            FakeExecutionContext,
-            FakeExecutor,
-            FakeObjectStore,
-            FakeTransaction,
+            fake_owned_object, fake_shared_object, FakeExecutionContext, FakeExecutor,
+            FakeObjectStore, FakeTransaction,
         },
     };
 

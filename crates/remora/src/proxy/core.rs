@@ -84,12 +84,16 @@ impl<E: Executor> ProxyCore<E> {
                 while let Some(transaction) = self.rx_transactions.recv().await {
                     self.metrics.increase_proxy_load(&self.id);
                     // check authentication first. If the tx fails authentication, no need to execute
-                    let execution_result = if !E::verify_transaction(self.executor.context(), &transaction) {
-                        // send an empty result if the transaction is invalid
-                        ExecutionResults::<E>::new_from_failed_verification(*transaction.digest())
-                    } else {
-                        E::execute(self.executor.context(), self.store.clone(), &transaction).await
-                    };
+                    let execution_result =
+                        if !E::verify_transaction(self.executor.context(), &transaction) {
+                            // send an empty result if the transaction is invalid
+                            ExecutionResults::<E>::new_from_failed_verification(
+                                *transaction.digest(),
+                            )
+                        } else {
+                            E::execute(self.executor.context(), self.store.clone(), &transaction)
+                                .await
+                        };
                     self.metrics.decrease_proxy_load(&self.id);
                     if self.tx_results.send(execution_result).await.is_err() {
                         tracing::warn!(
@@ -161,12 +165,14 @@ impl<E: Executor> ProxyCore<E> {
 
                         if ready_to_execute {
                             // TODO igor: perhaps we can move the authentication verification earlier, so as not to waste time and resources on scheduling a tx that will fail authentication anyway
-                            let execution_result = if !E::verify_transaction(ctx.clone(), &transaction) {
-                            
-                                ExecutionResults::<E>::new_from_failed_verification(*transaction.digest())
-                            } else {
-                                E::execute(ctx, store, &transaction).await
-                            };
+                            let execution_result =
+                                if !E::verify_transaction(ctx.clone(), &transaction) {
+                                    ExecutionResults::<E>::new_from_failed_verification(
+                                        *transaction.digest(),
+                                    )
+                                } else {
+                                    E::execute(ctx, store, &transaction).await
+                                };
 
                             for notify in current_handles {
                                 notify.notify_one();
@@ -256,8 +262,10 @@ mod tests {
         transactions
             .into_iter()
             .map(|tx| {
-                let unsigned_sender_data = SenderSignedData::new(tx.transaction_data().clone(), vec![]);
-                let unsigned_tx = Envelope::new_from_data_and_sig(unsigned_sender_data, tx.auth_sig().clone());
+                let unsigned_sender_data =
+                    SenderSignedData::new(tx.transaction_data().clone(), vec![]);
+                let unsigned_tx =
+                    Envelope::new_from_data_and_sig(unsigned_sender_data, tx.auth_sig().clone());
                 SuiTransaction::new_for_tests(unsigned_tx)
             })
             .collect::<Vec<_>>()
@@ -294,7 +302,7 @@ mod tests {
 
         // Receive the results.
         let results = rx_results.recv().await.unwrap();
-        
+
         if signed {
             assert!(results.authentication_success);
             assert!(results.success());

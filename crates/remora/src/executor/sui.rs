@@ -341,10 +341,14 @@ impl Executor for SuiExecutor {
     }
 
     fn verify_transaction(
-            ctx: Arc<BenchmarkContext>,
-            transaction: &super::api::TransactionWithTimestamp<Self::Transaction>,
-        ) -> bool {
-        transaction.deref().clone().try_into_verified_for_testing(ctx.get_committee(), &Default::default()).is_ok()
+        ctx: Arc<BenchmarkContext>,
+        transaction: &super::api::TransactionWithTimestamp<Self::Transaction>,
+    ) -> bool {
+        transaction
+            .deref()
+            .clone()
+            .try_into_verified_for_testing(ctx.get_committee(), &Default::default())
+            .is_ok()
     }
 }
 

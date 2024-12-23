@@ -17,12 +17,7 @@ use super::mock_consensus::ConsensusCommit;
 use crate::{
     error::{NodeError, NodeResult},
     executor::api::{
-        ExecutableTransaction,
-        ExecutionResults,
-        Executor,
-        StateStore,
-        Store,
-        Transaction,
+        ExecutableTransaction, ExecutionResults, Executor, StateStore, Store, Transaction,
     },
 };
 

@@ -238,6 +238,7 @@ mod tests {
 
     use std::sync::Arc;
 
+    use anyhow::Ok;
     use sui_types::{message_envelope::Envelope, transaction::SenderSignedData};
     use tokio::sync::mpsc;
 
@@ -280,7 +281,7 @@ mod tests {
 
     // Helper function to test transaction pre-execution. In signed mode, we expect the transactions to be
     // successfully executed. In unsigned mode, we expect the transactions to fail execution.
-    async fn pre_execute(mode: ProxyMode, signed: bool) {
+    async fn pre_execute(mode: ProxyMode, signed: bool) -> Result<(), anyhow::Error> {
         let (tx_proxy, rx_proxy) = mpsc::channel(100);
         let (tx_results, mut rx_results) = mpsc::channel(100);
 
@@ -313,35 +314,41 @@ mod tests {
         let results = rx_results.recv().await.unwrap();
 
         if signed {
-            assert!(results.authentication_success);
-            assert!(results.success());
+            if results.authentication_success && results.success() {
+                return Ok(());
+            } else {
+                return Err(anyhow::anyhow!("Expected authentication success"));
+            }
         } else {
-            assert!(!results.authentication_success);
-            assert!(!results.success())
+            if results.authentication_success || results.success() {
+                return Err(anyhow::anyhow!("Expected authentication failure"));
+            } else {
+                return Ok(());
+            }
         }
     }
 
     #[tokio::test]
     // Test the succesful pre-execution of signed transactions in single-threaded proxy mode.
     async fn test_single_threaded_proxy_signed() {
-        pre_execute(ProxyMode::SingleThreaded, true).await;
+        assert!(pre_execute(ProxyMode::SingleThreaded, true).await.is_ok());
     }
 
     #[tokio::test]
     // Test the succesful pre-execution of signed transactions in multi-threaded proxy mode.
     async fn test_multi_threaded_proxy_signed() {
-        pre_execute(ProxyMode::MultiThreaded, true).await;
+        assert!(pre_execute(ProxyMode::MultiThreaded, true).await.is_ok());
     }
 
     #[tokio::test]
     // Test that pre-execution fails on signed transactions in single-threaded proxy mode.
     async fn test_single_threaded_proxy_unsigned() {
-        pre_execute(ProxyMode::SingleThreaded, false).await;
+        assert!(pre_execute(ProxyMode::SingleThreaded, false).await.is_ok());
     }
 
     #[tokio::test]
     // Test that pre-execution fails on signed transactions in multi-threaded proxy mode.
     async fn test_multi_threaded_proxy_unsigned() {
-        pre_execute(ProxyMode::MultiThreaded, false).await;
+        assert!(pre_execute(ProxyMode::MultiThreaded, false).await.is_ok());
     }
 }
